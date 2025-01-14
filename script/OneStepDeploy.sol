@@ -7,6 +7,7 @@ import {FireBridge, ChainCode} from "../contracts/FireBridge.sol";
 import {FBTCMinter} from "../contracts/FBTCMinter.sol";
 import {FeeModel} from "../contracts/FeeModel.sol";
 import {FBTCGovernorModule} from "../contracts/FBTCGovernorModule.sol";
+import {FeeUpdaterModule} from "../test/FeeUpdaterModule.sol";
 
 interface IFactory {
     function deploy(
@@ -14,6 +15,13 @@ interface IFactory {
         bytes32 salt,
         bytes memory initCode
     ) external returns (address);
+
+    function getAddress(
+        uint8 typ,
+        bytes32 salt,
+        address sender,
+        bytes calldata initCode
+    ) external view returns (address _contract);
 }
 
 library FactoryLib {
@@ -40,6 +48,7 @@ struct DeployConfig {
     address[] pauserAndLockers;
     address userManager;
     address chainMananger;
+    address feeUpdater;
     // Contract code.
     bytes fireBridgeCode;
     bytes proxyCode;
@@ -47,13 +56,42 @@ struct DeployConfig {
     bytes feeModelCode;
     bytes minterCode;
     bytes governorModuleCode;
+    bytes feeUpdatorCode;
     bytes32[] dstChains;
+}
+
+struct DeployedContracts {
+    address bridge;
+    address fee;
+    address fbtc;
+    address minter;
+    address module;
+    address updater;
 }
 
 contract OneStepDeploy {
     using FactoryLib for IFactory;
 
-    function deploy(DeployConfig memory c) external {
+    address public deployer;
+
+    constructor() {
+        deployer = tx.origin;
+    }
+
+    function emergencyCall(
+        address to,
+        bytes calldata data,
+        uint256 value
+    ) external payable {
+        require(deployer == tx.origin, "Only deployer");
+        (bool success, ) = to.call{value: value}(data);
+        require(success, "Call failed");
+    }
+
+    function deploy(
+        DeployConfig memory c
+    ) external returns (DeployedContracts memory) {
+        require(deployer == tx.origin, "Only deployer");
         IFactory factory = IFactory(c.factory);
 
         uint256 saltStart = uint256(c.tag);
@@ -87,7 +125,7 @@ contract OneStepDeploy {
         // FeeModel
         FeeModel feeModel = FeeModel(
             factory.doDeploy(
-                saltStart++, // Updated
+                saltStart++,
                 abi.encodePacked(c.feeModelCode, abi.encode(tempOwner))
             )
         );
@@ -147,8 +185,9 @@ contract OneStepDeploy {
         // FBTC
         address fbtcAddress = factory.doDeploy(
             saltStart++,
-            abi.encodePacked(c.fbtcCode, abi.encode(owner, bridgeAddress))
+            abi.encodePacked(c.fbtcCode, abi.encode(tempOwner, bridgeAddress))
         );
+        FBTC(fbtcAddress).transferOwnership(owner);
 
         bridge.setToken(fbtcAddress);
 
@@ -197,5 +236,27 @@ contract OneStepDeploy {
         gov.grantRole(gov.USER_MANAGER_ROLE(), c.userManager);
         gov.grantRole(gov.CHAIN_MANAGER_ROLE(), c.chainMananger);
         gov.grantRole(gov.FEE_UPDATER_ROLE(), c.feeRecipientAndUpdater);
+
+        ///////////////////////////
+        // FeeUpdaterModule
+        FeeUpdaterModule updater = FeeUpdaterModule(
+            IFactory(factory).doDeploy(
+                saltStart++,
+                abi.encodePacked(c.feeUpdatorCode, abi.encode(tempOwner))
+            )
+        );
+        updater.setFBTCGovernorModule(address(gov));
+        updater.grantRole(updater.FEE_UPDATER_ROLE(), c.feeUpdater);
+        updater.transferOwnership(c.feeRecipientAndUpdater);
+
+        return
+            DeployedContracts({
+                bridge: address(bridge),
+                fee: address(feeModel),
+                minter: address(minter),
+                module: address(gov),
+                fbtc: fbtcAddress,
+                updater: address(updater)
+            });
     }
 }

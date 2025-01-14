@@ -10,18 +10,45 @@ optimizer_runs = 20_000
 
 fs_permissions = [{ access = "read-write", path = "./script/deployments"}]
 
+
 [rpc_endpoints]
-seth = "https://rpc-sepolia.rockx.com"
-smnt = "https://rpc.sepolia.mantle.xyz"
-eth = "https://rpc.ankr.com/eth"
-mnt = "https://rpc.mantle.xyz"
-bsc = "https://bsc-dataseed.binance.org"
+optimism = "${OP_RPC}"
+base = "${BASE_RPC}"
+xdai = "${GNOSIS_RPC}"
+polygon = "${POLYGON_RPC}"
+arbitrum = "${ARB_RPC}"
+mainnet = "${ETH_RPC}"
+bsc = "${BSC_RPC}"
+avalanche = "${AVAX_RPC}"
+mantle = "${MANTLE_RPC}"
+fantom = "${FTM_RPC}"
+sepolia = "${SEPOLIA_RPC}"
+mode = "${MODE_RPC}"
+manta = "${MANTA_RPC}"
+scroll = "${SCROLL_RPC}"
+mantle-testnet = "${SMNT_RPC}"
+bob = "${BOB_RPC}"
+bera = "${BERA_RPC}"
+sonic = "${SNOIC_RPC}"
 
 [etherscan]
-seth = { key = "${ETHERSCAN_TOKEN}", url="https://api-sepolia.etherscan.io/api?", chain="sepolia" }
-smnt = { key = "${MANTLE_TOKEN}", url="https://explorer.sepolia.mantle.xyz/api?", chain=5003 }
-eth = { key = "${ETHERSCAN_TOKEN}", url="https://api.etherscan.io/api?"}
-mnt = { key = "${MANTLE_TOKEN}", url="https://explorer.mantle.xyz/api?"}
+sepolia = { key = "${SEPOLIASCAN_TOKEN}", url="https://api-sepolia.etherscan.io/api?", chain="sepolia" }
+mantle-testnet = { key = "${MANTLE_TOKEN}", url="https://explorer.sepolia.mantle.xyz/api?", chain=5003 }
+mainnet = { key = "${ETHERSCAN_TOKEN}", url="https://api.etherscan.io/api?", chain=1}
+polygon = { key= "${POLYGONSCAN_TOKEN}", url="https://api.polygonscan.com/api?", chain=137}
 bsc = { key= "${BSCSCAN_TOKEN}", url="https://api.bscscan.com/api?", chain=56}
+fantom = { key= "${FTMSCAN_TOKEN}", url="https://api.ftmscan.com/api?", chain=250}
+arbitrum = { key= "${ARBISCAN_TOKEN}", url="https://api.arbiscan.io/api?", chain=42161}
+avalanche = { key= "${SNOWTRACE_TOKEN}", url="https://api.snowtrace.io/api?", chain=43114}
+optimism = { key= "${OPTIMISMSCAN_TOKEN}", url="https://api-optimistic.etherscan.io/api?", chain=10}
+base = { key= "${BASESCAN_TOKEN}", url="https://api.basescan.org/api?", chain=8453}
+xdai = { key= "${GNOSISSCAN_TOKEN}", url="https://api.gnosisscan.io/api?", chain=100}
+mantle = { key = "${MANTLE_TOKEN}", url="https://explorer.mantle.xyz/api?", chain=5000}
+manta = { key = "${MANTA_TOKEN}", url="https://pacific-explorer.manta.network/api?", chain=169}
+mode = { key = "${MODE_TOKEN}", url="https://explorer.mode.network/api?", chain=34443}
+scroll = {key = "${SCROLL_TOKEN}", url="https://api.scrollscan.com/api", chain=534352}
+bob = {key = "${DUMMY_TOKEN}", url="https://explorer.gobob.xyz/api?", chain=60808}
+bera = {key = "${DUMMY_TOKEN}", url="https://api.routescan.io/v2/network/testnet/evm/80084/etherscan/api?", chain=80084}
+sonic = {key = "${SNOIC_TOKEN}", url="https://api.sonicscan.org/api?", chain=146}
 
-# See more config options https://github.com/foundry-rs/foundry/tree/master/crates/config
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

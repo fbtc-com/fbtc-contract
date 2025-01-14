@@ -21,7 +21,6 @@ interface ISafe {
 }
 
 abstract contract BaseSafeModule is RoleBasedAccessControl {
-
     function _call(address _to, bytes memory _data) internal {
         (bool success, bytes memory _retData) = ISafe(safe())
             .execTransactionFromModuleReturnData(

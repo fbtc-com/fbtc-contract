@@ -34,7 +34,7 @@ contract FBTCGovernorModule is BaseSafeModule {
         fbtc = FBTC(_fbtc);
         maxCrossChainMinFee = 0.03 * 1e8; // 0.03 FBTC
         maxUserBurnMinFee = 0.03 * 1e8; // 0.03 FBTC
-        maxUserBurnFeeRate = 2 * 1_000_000 / 1000; // 0.2%
+        maxUserBurnFeeRate = (2 * 1_000_000) / 1000; // 0.2%
     }
 
     function bridge() public view returns (FireBridge _bridge) {
@@ -51,17 +51,23 @@ contract FBTCGovernorModule is BaseSafeModule {
         emit FBTCSet(_fbtc);
     }
 
-    function setMaxCrossChainMinFee(uint256 _maxCrossChainMinFee) external onlyOwner {
+    function setMaxCrossChainMinFee(
+        uint256 _maxCrossChainMinFee
+    ) external onlyOwner {
         maxCrossChainMinFee = _maxCrossChainMinFee;
         emit MaxCrossChainMinFeeSet(_maxCrossChainMinFee);
     }
 
-    function setMaxUserBurnMinFee(uint256 _maxUserBurnMinFee) external onlyOwner {
+    function setMaxUserBurnMinFee(
+        uint256 _maxUserBurnMinFee
+    ) external onlyOwner {
         maxUserBurnMinFee = _maxUserBurnMinFee;
         emit MaxUserBurnMinFeeSet(_maxUserBurnMinFee);
     }
 
-    function setMaxUserBurnFeeRate(uint256 _maxUserBurnFeeRate) external onlyOwner {
+    function setMaxUserBurnFeeRate(
+        uint256 _maxUserBurnFeeRate
+    ) external onlyOwner {
         maxUserBurnFeeRate = _maxUserBurnFeeRate;
         emit MaxUserBurnFeeRateSet(_maxUserBurnFeeRate);
     }
@@ -139,9 +145,9 @@ contract FBTCGovernorModule is BaseSafeModule {
         // Copy the config set by admin.
         FeeModel _feeModel = feeModel();
         FeeModel.FeeConfig memory config;
-        try _feeModel.getCrosschainFeeConfig(
-            _chain
-        ) returns (FeeModel.FeeConfig memory _config){
+        try _feeModel.getCrosschainFeeConfig(_chain) returns (
+            FeeModel.FeeConfig memory _config
+        ) {
             config = _config;
         } catch {
             // If no CrosschainFeeConfig is set, get the default one.
@@ -160,7 +166,10 @@ contract FBTCGovernorModule is BaseSafeModule {
         address _user,
         FeeModel.FeeConfig calldata _config
     ) external onlyRole(USER_MANAGER_ROLE) {
-        require(_config.minFee <= maxUserBurnMinFee, "Min fee exceeds maxUserBurnMinFee");
+        require(
+            _config.minFee <= maxUserBurnMinFee,
+            "Min fee exceeds maxUserBurnMinFee"
+        );
         for (uint i = 0; i < _config.tiers.length; i++) {
             FeeModel.FeeTier calldata tier = _config.tiers[i];
             require(
@@ -169,7 +178,7 @@ contract FBTCGovernorModule is BaseSafeModule {
             );
         }
         FeeModel _feeModel = feeModel();
-         _call(
+        _call(
             address(_feeModel),
             abi.encodeCall(_feeModel.setUserBurnFeeConfig, (_user, _config))
         );

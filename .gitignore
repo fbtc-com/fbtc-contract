@@ -6,3 +6,6 @@ broadcast
 Counter*
 .github
 .env
+
+.python-version
+__pycache__
