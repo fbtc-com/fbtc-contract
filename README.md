@@ -21,6 +21,9 @@ forge compile
 
 # Run test
 forge test
+
+# Run OpenZeppelin Upgrades check
+npx @openzeppelin/upgrades-core validate --unsafeAllow constructor,missing-initializer,state-variable-immutable
 ```
 
 ## Deploy
@@ -30,7 +33,7 @@ forge test
     `.env`
     ```diff
     + SNOIC_RPC=https://sonic.drpc.org
-    + SNOIC_TOKEN=CJRB5MPKIUWA95EJJYCA5MA1ATV1NTK76K
+    + SNOIC_TOKEN=YourAPIKey
     ```
 
     `foundry.toml`

@@ -7,9 +7,9 @@ evm_version = "london"
 via_ir = true
 optimizer = true
 optimizer_runs = 20_000
-
 fs_permissions = [{ access = "read-write", path = "./script/deployments"}]
-
+build_info = true
+extra_output = ["storageLayout"]
 
 [rpc_endpoints]
 optimism = "${OP_RPC}"

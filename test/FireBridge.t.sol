@@ -6,13 +6,15 @@ import {FBTC} from "../contracts/FBTC.sol";
 import {FBTCMinter, FireBridge} from "../contracts/FBTCMinter.sol";
 import {FeeModel} from "../contracts/FeeModel.sol";
 
+import {FireBridgeV2} from "../contracts/FireBridgeV2.sol";
+
 import {Operation, Request, UserInfo, RequestLib, ChainCode, Status} from "../contracts/Common.sol";
 
 contract FireBridgeTest is Test {
     using RequestLib for Request;
 
     FBTCMinter public minter;
-    FireBridge public bridge;
+    FireBridgeV2 public bridge;
     FBTC public fbtc;
     FeeModel public feeModel;
 
@@ -31,7 +33,7 @@ contract FireBridgeTest is Test {
     bytes32 DST_CHAIN3 = bytes32(uint256(0xddddd3));
 
     function setUp() public {
-        bridge = new FireBridge(OWNER, ChainCode.BTC);
+        bridge = new FireBridgeV2(OWNER, ChainCode.BTC);
         bridge.addQualifiedUser(OWNER, BTC_ADDR1, BTC_ADDR2);
 
         feeModel = new FeeModel(OWNER);
@@ -120,7 +122,7 @@ contract FireBridgeTest is Test {
 
         // Mint request
         (bytes32 _hash, Request memory r) = bridge.addMintRequest(
-            1000,
+            1500,
             TX_DATA1,
             1
         );
@@ -129,7 +131,7 @@ contract FireBridgeTest is Test {
 
         assertEq(r.dstChain, bridge.chain());
         assertEq(r.dstAddress, abi.encode(OWNER));
-        assertEq(r.amount, 1000);
+        assertEq(r.amount, 1500);
         assertEq(r.srcChain, ChainCode.BTC);
         assertEq(
             r.srcAddress,
@@ -141,12 +143,12 @@ contract FireBridgeTest is Test {
         minter.confirmMintRequest(_hash);
 
         // Burn request
-        (_hash, r) = bridge.addBurnRequest(500);
+        (_hash, r) = bridge.addBurnRequest(1000);
         assertEq(r.nonce, bridge.nonce() - 1);
         assertEq(abi.encode(bridge.getRequestByHash(_hash)), abi.encode(r));
         assertEq(r.srcChain, bridge.chain());
         assertEq(r.srcAddress, abi.encode(OWNER));
-        assertEq(r.amount, 500);
+        assertEq(r.amount, 1000);
         assertEq(r.dstChain, ChainCode.BTC);
         assertEq(
             r.dstAddress,
@@ -237,8 +239,8 @@ contract FireBridgeTest is Test {
         minter.confirmMintRequest(_hash);
         assertEq(fbtc.balanceOf(OWNER), 1000);
 
-        (_hash, r) = bridge.addBurnRequest(500);
-        assertEq(fbtc.balanceOf(OWNER), 500);
+        (_hash, r) = bridge.addBurnRequest(1000);
+        assertEq(fbtc.balanceOf(OWNER), 0);
 
         r = bridge.getRequestByHash(_hash);
         assertTrue(r.status == Status.Pending);
@@ -328,5 +330,118 @@ contract FireBridgeTest is Test {
 
         vm.expectRevert("Source request already confirmed");
         _confirmCrosschainRequest(rs[2], _hash3);
+    }
+
+    function testMinAmount() public {
+        // Test default min amounts
+        assertEq(bridge.minMintableAmount(), 546);
+        assertEq(bridge.minBurnableAmount(), 546);
+        assertEq(bridge.minBridgeableAmount(), 0);
+
+        // Test setting min amounts
+        bridge.setMinMintableAmount(1000);
+        bridge.setMinBurnableAmount(800);
+        bridge.setMinBridgeableAmount(500);
+
+        assertEq(bridge.minMintableAmount(), 1000);
+        assertEq(bridge.minBurnableAmount(), 800);
+        assertEq(bridge.minBridgeableAmount(), 500);
+
+        // Mint some tokens for testing
+        (bytes32 _hash, ) = bridge.addMintRequest(2000, TX_DATA1, 1);
+        minter.confirmMintRequest(_hash);
+        assertEq(fbtc.balanceOf(OWNER), 2000);
+
+        // Test mint with amount less than minimum
+        vm.expectRevert("Minting amount too small");
+        bridge.addMintRequest(999, TX_DATA2, 1);
+
+        // Test burn with amount less than minimum
+        vm.expectRevert("Burning amount too small");
+        bridge.addBurnRequest(799);
+
+        // Test bridge with amount less than minimum
+        vm.expectRevert("Bridging amount too small");
+        bridge.addCrosschainRequest(DST_CHAIN1, abi.encode(ONE), 499);
+
+        // Test successful operations with minimum amounts
+        (_hash, ) = bridge.addMintRequest(1000, TX_DATA2, 1);
+        minter.confirmMintRequest(_hash);
+
+        (_hash, ) = bridge.addBurnRequest(800);
+        minter.confirmBurnRequest(_hash, TX_DATA3, 0);
+
+        (_hash, ) = bridge.addCrosschainRequest(
+            DST_CHAIN1,
+            abi.encode(ONE),
+            500
+        );
+        Request memory r = bridge.getRequestByHash(_hash);
+        _confirmCrosschainRequest(r, _hash);
+    }
+
+    function testRefund() public {
+        // Test refund by non-owner should fail
+        vm.prank(ONE);
+        vm.expectRevert();
+        bridge.refund(ONE, 1000, "test refund");
+
+        // Test successful refund by owner
+        uint256 initialBalance = fbtc.balanceOf(ONE);
+        string memory reason = "test refund reason";
+        bridge.refund(ONE, 1000, reason);
+
+        assertEq(
+            fbtc.balanceOf(ONE),
+            initialBalance + 1000,
+            "Refund amount not correctly minted"
+        );
+    }
+
+    function testSubBridge() public {
+        address subBridge1 = address(0x1111);
+        address subBridge2 = address(0x2222);
+
+        // Test adding sub-bridges
+        bridge.addSubBridge(subBridge1);
+        bridge.addSubBridge(subBridge2);
+
+        address[] memory subBridges = bridge.getSubBridges();
+        assertEq(subBridges.length, 2);
+        assertTrue(subBridges[0] == subBridge1 || subBridges[1] == subBridge1);
+        assertTrue(subBridges[0] == subBridge2 || subBridges[1] == subBridge2);
+
+        // Test minting through sub-bridge
+        vm.prank(subBridge1);
+        bridge.mint(ONE, 1000);
+        assertEq(fbtc.balanceOf(ONE), 1000);
+
+        // Test burning through sub-bridge
+        vm.prank(subBridge1);
+        bridge.burn(ONE, 500);
+        assertEq(fbtc.balanceOf(ONE), 500);
+
+        // Test removing sub-bridge
+        bridge.removeSubBridge(subBridge1);
+        subBridges = bridge.getSubBridges();
+        assertEq(subBridges.length, 1);
+        assertEq(subBridges[0], subBridge2);
+
+        // Test permissions
+
+        // Non-sub-bridge cannot mint
+        vm.prank(ONE);
+        vm.expectRevert("Caller not sub-bridge");
+        bridge.mint(ONE, 1000);
+
+        // Non-sub-bridge cannot burn
+        vm.prank(ONE);
+        vm.expectRevert("Caller not sub-bridge");
+        bridge.burn(ONE, 1000);
+
+        // Removed sub-bridge cannot mint
+        vm.prank(subBridge1);
+        vm.expectRevert("Caller not sub-bridge");
+        bridge.mint(ONE, 1000);
     }
 }
