@@ -23,7 +23,7 @@ forge compile
 forge test
 
 # Run OpenZeppelin Upgrades check
-npx @openzeppelin/upgrades-core validate --unsafeAllow constructor,missing-initializer,state-variable-immutable
+forge clean && forge build && npx @openzeppelin/upgrades-core validate --unsafeAllow constructor,missing-initializer,state-variable-immutable
 ```
 
 ## Deploy

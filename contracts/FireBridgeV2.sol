@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {Request, UserInfo, RequestLib, Operation, Status, ChainCode} from "./Common.sol";
-import {BridgeStorage} from "./base/BridgeStorage.sol";
+import {BridgeStorageV2} from "./base/BridgeStorageV2.sol";
 import {FToken} from "./base/FToken.sol";
 import {BasePausableUpgradeable} from "./base/BasePausableUpgradeable.sol";
 import {FeeModel} from "./FeeModel.sol";
@@ -13,7 +13,7 @@ import {FeeModel} from "./FeeModel.sol";
 /// @notice This contract handles minting, burning and cross-chain transfers of FBTC tokens
 /// @dev We copy old code from FireBridge.sol cause we use OpenZeppelin Upgrades tool to ensure our upgrade works.
 /// @custom:oz-upgrades-from FireBridge
-contract FireBridgeV2 is BridgeStorage, BasePausableUpgradeable {
+contract FireBridgeV2 is BridgeStorageV2, BasePausableUpgradeable {
     using RequestLib for Request;
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -94,16 +94,6 @@ contract FireBridgeV2 is BridgeStorage, BasePausableUpgradeable {
 
     /// @notice The identifier for the main chain in the FBTC system
     bytes32 public immutable MAIN_CHAIN;
-
-    /// @notice Minimum amount required for minting FBTC
-    uint256 public minMintableAmount;
-    /// @notice Minimum amount required for burning FBTC
-    uint256 public minBurnableAmount;
-    /// @notice Minimum amount required for bridging FBTC
-    uint256 public minBridgeableAmount;
-
-    /// @notice Set of registered sub-bridge addresses
-    EnumerableSet.AddressSet internal subBridges;
 
     /// @param _owner The address of the contract owner
     /// @param _mainChain The identifier of the main chain
